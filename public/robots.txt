@@ -1,5 +1,4 @@
 User-agent: *
 Allow: /
 
-# Update the host below to your real domain, matching `site` in astro.config.mjs
-Sitemap: https://example.com/sitemap-index.xml
+Sitemap: https://portfolio.ehsankadir413.workers.dev/sitemap-index.xml
