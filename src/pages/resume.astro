@@ -1,0 +1,192 @@
+---
+import Base from '../layouts/Base.astro';
+import { profile, socialLinks } from '../data/profile';
+import { sortedTimeline } from '../data/timeline';
+import { stackIndex, caseStudies } from '../lib/content';
+
+/**
+ * Derived entirely from src/data/timeline.ts — the same array /about renders —
+ * so the two can never disagree. Print this page to PDF rather than maintaining
+ * a separate document that drifts out of date.
+ */
+const stack = await stackIndex();
+const work = (await caseStudies()).slice(0, 3);
+---
+
+<Base title="Resume" description={`Resume of ${profile.name}. ${profile.positioning}`}>
+  <div class="shell cv">
+    <div class="cv__actions no-print">
+      <button class="plain meta ul link-accent" data-print>Print or save as PDF</button>
+      <span class="meta">Generated from the same data as the Journey section.</span>
+    </div>
+
+    <header class="cv__head">
+      <h1 class="cv__name">{profile.name}</h1>
+      <p class="lead cv__claim">{profile.positioning}</p>
+      <p class="meta cv__contacts">
+        {profile.email} · {profile.location}
+        {socialLinks.map((l) => <> · {l.href}</>)}
+      </p>
+    </header>
+
+    <section class="cv__section">
+      <h2 class="meta meta--ink">Experience &amp; education</h2>
+      <ol class="cv__list">
+        {sortedTimeline.map((entry) => (
+          <li class="cv__item">
+            <div class="cv__when">
+              <span class="meta meta--ink">{entry.start}{entry.end && <> — {entry.end}</>}</span>
+              <span class="meta">{entry.kind}</span>
+            </div>
+            <div class="cv__what">
+              <h3 class="cv__role">{entry.title}</h3>
+              {entry.org && <p class="meta cv__org">{entry.org}</p>}
+              <p class="cv__summary">{entry.summary}</p>
+              {entry.detail && (
+                <ul class="cv__bullets">
+                  {entry.detail.map((line) => <li>{line}</li>)}
+                </ul>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section class="cv__section">
+      <h2 class="meta meta--ink">Selected work</h2>
+      <ul class="cv__work">
+        {work.map((p) => (
+          <li>
+            <span class="cv__role cv__role--sm">{p.data.title}</span>
+            <span class="cv__summary">{p.data.tagline}</span>
+            <span class="meta">{p.data.technologies.join(' · ')} · /work/{p.id}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+
+    <section class="cv__section">
+      <h2 class="meta meta--ink">Technologies</h2>
+      <p class="cv__stack meta meta--plain">{stack.map((s) => s.tech).join(' · ')}</p>
+      <p class="meta cv__note no-print">
+        Derived from the projects above, not self-assessed.
+      </p>
+    </section>
+  </div>
+</Base>
+
+<script>
+  document.querySelector('[data-print]')?.addEventListener('click', () => window.print());
+</script>
+
+<style>
+  .cv {
+    padding-block: 3rem 0;
+    max-width: 52rem;
+  }
+  .cv__actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 1rem;
+    padding-bottom: 2rem;
+  }
+  .cv__head {
+    border-bottom: 1px solid var(--hairline);
+    padding-bottom: 1.75rem;
+  }
+  .cv__name {
+    font-size: var(--size-title);
+  }
+  .cv__claim {
+    margin-top: 0.75rem;
+  }
+  .cv__contacts {
+    margin-top: 1rem;
+    text-transform: none;
+    letter-spacing: 0.02em;
+    word-break: break-word;
+  }
+  .cv__section {
+    margin-top: 2.5rem;
+  }
+  .cv__section > h2 {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    letter-spacing: 0.09em;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .cv__list,
+  .cv__work {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .cv__item,
+  .cv__work li {
+    display: grid;
+    gap: 0.5rem;
+    padding-block: 1.5rem;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .cv__when {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .cv__role {
+    font-size: var(--size-h3);
+  }
+  .cv__role--sm {
+    font-family: var(--font-display);
+    font-size: 1.0625rem;
+  }
+  .cv__org {
+    margin-top: 0.25rem;
+  }
+  .cv__summary {
+    display: block;
+    margin-top: 0.5rem;
+    color: var(--ink-muted);
+  }
+  .cv__bullets {
+    margin: 0.75rem 0 0;
+    padding-left: 1.1rem;
+  }
+  .cv__bullets li::marker {
+    color: var(--ink-muted);
+  }
+  .cv__stack {
+    margin-top: 1rem;
+    color: var(--ink);
+    line-height: 1.8;
+  }
+  .cv__note {
+    margin-top: 0.75rem;
+  }
+  @media (min-width: 48rem) {
+    .cv {
+      padding-block: 5rem 0;
+    }
+    .cv__item {
+      grid-template-columns: 10rem minmax(0, 1fr);
+      gap: 2.5rem;
+    }
+    .cv__when {
+      display: grid;
+      gap: 0.3rem;
+      align-content: start;
+    }
+  }
+  @media print {
+    .cv {
+      max-width: none;
+      padding-block: 0;
+    }
+    .cv__item {
+      break-inside: avoid;
+    }
+  }
+</style>

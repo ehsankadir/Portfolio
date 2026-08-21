@@ -1,0 +1,226 @@
+---
+import '../styles/global.css';
+import { profile, socialLinks } from '../data/profile';
+
+interface Props {
+  title: string;
+  description: string;
+  /** 'article' for project and post pages. */
+  type?: 'website' | 'article';
+  /** Extra JSON-LD, stringified. */
+  jsonLd?: string;
+  /** Hide chrome on the printable resume. */
+  bare?: boolean;
+}
+
+const { title, description, type = 'website', jsonLd, bare = false } = Astro.props;
+const canonical = new URL(Astro.url.pathname, Astro.site ?? 'https://example.com');
+const fullTitle = title === profile.name ? title : `${title} — ${profile.name}`;
+
+// The Lab link only appears once there is enough there to be worth visiting.
+// A nav item pointing at a near-empty page reads as neglect, not curiosity.
+import { getCollection } from 'astro:content';
+const experiments = (await getCollection('projects')).filter(
+  (p) => !p.data.draft && p.data.depth === 'experiment',
+);
+const nav = [
+  { href: '/work', label: 'Work' },
+  { href: '/writing', label: 'Writing' },
+  ...(experiments.length >= 4 ? [{ href: '/lab', label: 'Lab' }] : []),
+  { href: '/about', label: 'About' },
+];
+const path = Astro.url.pathname;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical.href} />
+    <meta name="author" content={profile.name} />
+    <meta property="og:site_name" content={profile.name} />
+    <meta property="og:title" content={fullTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content={type} />
+    <meta property="og:url" content={canonical.href} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={fullTitle} />
+    <meta name="twitter:description" content={description} />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..600&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap"
+    />
+
+    {jsonLd && <script type="application/ld+json" set:html={jsonLd} />}
+
+    <!-- Theme before first paint: no flash, respects the system on first visit. -->
+    <script is:inline>
+      (function () {
+        try {
+          var stored = localStorage.getItem('theme');
+          var dark = stored
+            ? stored === 'dark'
+            : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+        } catch (e) {}
+      })();
+    </script>
+  </head>
+
+  <body>
+    <a class="skip meta meta--ink" href="#main">Skip to content</a>
+
+    {!bare && (
+      <header class="site-head no-print">
+        <div class="shell site-head__inner">
+          <a href="/" class="meta meta--ink ul site-head__name">{profile.name}</a>
+          <nav aria-label="Primary" class="site-nav">
+            {nav.map((item) => (
+              <a
+                href={item.href}
+                class="meta ul"
+                style={path.startsWith(item.href) ? 'color: var(--accent)' : ''}
+                aria-current={path.startsWith(item.href) ? 'page' : undefined}
+              >
+                {item.label}
+              </a>
+            ))}
+            <button class="plain meta ul" data-theme-toggle aria-live="polite">Theme</button>
+          </nav>
+        </div>
+      </header>
+    )}
+
+    <main id="main">
+      <slot />
+    </main>
+
+    {!bare && (
+      <footer class="site-foot no-print" id="contact">
+        <div class="shell site-foot__inner">
+          <div>
+            <p class="meta">Get in touch</p>
+            <p class="site-foot__email">
+              <a href={`mailto:${profile.email}`} class="ul link-accent">{profile.email}</a>
+            </p>
+          </div>
+          <nav aria-label="Elsewhere" class="site-foot__links">
+            {socialLinks.map((l) => (
+              <a href={l.href} class="meta ul" rel="me">{l.label}</a>
+            ))}
+            <a href="/lab" class="meta ul">Lab</a>
+            <a href="/resume" class="meta ul">Resume</a>
+            <a href="/contact" class="meta ul">Contact</a>
+          </nav>
+          <p class="meta">
+            {profile.name} · {new Date().getFullYear()}
+          </p>
+        </div>
+      </footer>
+    )}
+
+    <script>
+      // Theme toggle
+      const root = document.documentElement;
+      const btn = document.querySelector('[data-theme-toggle]');
+      const label = () => (root.dataset.theme === 'dark' ? 'Light' : 'Dark');
+      if (btn) {
+        btn.textContent = label();
+        btn.setAttribute('aria-label', `Switch to ${label().toLowerCase()} theme`);
+        btn.addEventListener('click', () => {
+          root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
+          localStorage.setItem('theme', root.dataset.theme);
+          btn.textContent = label();
+          btn.setAttribute('aria-label', `Switch to ${label().toLowerCase()} theme`);
+        });
+      }
+
+      // Scroll reveal for list items only. Never created under reduced motion.
+      const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      const items = document.querySelectorAll('[data-reveal]');
+      if (reduced || !('IntersectionObserver' in window)) {
+        items.forEach((el) => el.setAttribute('data-shown', 'true'));
+      } else {
+        const io = new IntersectionObserver(
+          (entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) return;
+              const el = entry.target as HTMLElement;
+              const i = Number(el.getAttribute('data-reveal')) || 0;
+              el.style.transitionDelay = `${Math.min(i, 8) * 40}ms`;
+              el.setAttribute('data-shown', 'true');
+              io.unobserve(el);
+            });
+          },
+          { rootMargin: '0px 0px -6% 0px', threshold: 0.05 },
+        );
+        items.forEach((el) => io.observe(el));
+      }
+    </script>
+
+    <style>
+      .site-head {
+        border-bottom: 1px solid var(--hairline);
+      }
+      .site-head__inner {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        justify-content: space-between;
+        gap: 0.75rem 1.5rem;
+        padding-block: 1rem;
+      }
+      .site-head__name {
+        letter-spacing: 0.12em;
+      }
+      .site-nav {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: baseline;
+        gap: 1.25rem;
+      }
+      @media (min-width: 48rem) {
+        .site-nav {
+          gap: 1.75rem;
+        }
+      }
+      .site-foot {
+        border-top: 1px solid var(--hairline);
+        margin-top: 6rem;
+      }
+      .site-foot__inner {
+        display: grid;
+        gap: 2rem;
+        padding-block: 2.5rem 3rem;
+      }
+      .site-foot__email {
+        font-family: var(--font-display);
+        font-size: var(--size-h3);
+        margin-top: 0.5rem;
+        word-break: break-word;
+      }
+      .site-foot__links {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1.25rem;
+      }
+      @media (min-width: 56rem) {
+        .site-foot__inner {
+          grid-template-columns: 1fr auto;
+          align-items: end;
+          row-gap: 1.5rem;
+        }
+        .site-foot__links {
+          justify-content: flex-end;
+        }
+      }
+    </style>
+  </body>
+</html>

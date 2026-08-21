@@ -1,0 +1,209 @@
+---
+import { render } from 'astro:content';
+import Base from '../../layouts/Base.astro';
+import { allProjects, neighbours, type ProjectEntry } from '../../lib/content';
+import { profile } from '../../data/profile';
+
+export async function getStaticPaths() {
+  const projects = await allProjects();
+  return projects.map((project) => ({
+    params: { slug: project.id },
+    props: { project },
+  }));
+}
+
+type Props = { project: ProjectEntry };
+const { project } = Astro.props as Props;
+const { Content, headings } = await render(project);
+const { prev, next } = await neighbours(project);
+const d = project.data;
+
+/**
+ * Experiments get a stripped page: no hero block, no contents rail. The
+ * distinction is structural, not cosmetic — a lab note should not be dressed up
+ * as a case study.
+ */
+const isExperiment = d.depth === 'experiment';
+const contents = headings.filter((h) => h.depth === 2);
+const links = Object.entries(d.links).filter(([, href]) => Boolean(href)) as [
+  string,
+  string,
+][];
+
+const jsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Article',
+  headline: d.title,
+  description: d.tagline,
+  datePublished: `${d.year}-01-01`,
+  author: { '@type': 'Person', name: profile.name },
+  keywords: d.technologies.join(', '),
+});
+---
+
+<Base title={d.title} description={d.tagline} type="article" jsonLd={jsonLd}>
+  <article class="shell entry">
+    <header class="entry__head">
+      <p class="meta">
+        {isExperiment ? 'Lab' : 'Case study'} · {d.record}
+      </p>
+      <h1 class="entry__title">{d.title}</h1>
+      <p class="lead measure entry__tagline">{d.tagline}</p>
+    </header>
+
+    <div class:list={['entry__body', isExperiment && 'entry__body--lean']}>
+      <aside class="rail">
+        <dl class="rail__list">
+          <div><dt class="meta">Year</dt><dd class="meta meta--ink">{d.year}</dd></div>
+          <div><dt class="meta">Status</dt><dd class="meta meta--ink">{d.status}</dd></div>
+          <div><dt class="meta">Field</dt><dd class="meta meta--ink">{d.category}</dd></div>
+          <div class="rail__wide">
+            <dt class="meta">Stack</dt>
+            <dd class="meta meta--ink">{d.technologies.join(' · ')}</dd>
+          </div>
+          {links.length > 0 && (
+            <div class="rail__wide">
+              <dt class="meta">Links</dt>
+              <dd class="rail__links">
+                {links.map(([label, href]) => (
+                  <a href={href} class="meta ul link-accent" rel="noopener">
+                    {label}
+                  </a>
+                ))}
+              </dd>
+            </div>
+          )}
+        </dl>
+
+        {!isExperiment && contents.length > 1 && (
+          <nav class="rail__toc" aria-label="On this page">
+            <p class="meta">Contents</p>
+            <ol class="rail__toc-list">
+              {contents.map((h) => (
+                <li><a href={`#${h.slug}`} class="meta ul">{h.text}</a></li>
+              ))}
+            </ol>
+          </nav>
+        )}
+      </aside>
+
+      <div class="entry__content">
+        {!isExperiment && (
+          <div class="placeholder entry__hero" data-label="[Replace: hero image or architecture diagram]" role="img" aria-label="Placeholder for the project hero image"></div>
+        )}
+        <div class="prose">
+          <Content />
+        </div>
+      </div>
+    </div>
+
+    <nav class="siblings" aria-label={isExperiment ? 'More experiments' : 'More work'}>
+      {prev ? (
+        <a href={`/work/${prev.id}`} class="meta ul siblings__prev">← {prev.data.title}</a>
+      ) : (
+        <span></span>
+      )}
+      {next ? (
+        <a href={`/work/${next.id}`} class="meta ul siblings__next">{next.data.title} →</a>
+      ) : (
+        <span></span>
+      )}
+    </nav>
+  </article>
+</Base>
+
+<style>
+  .entry {
+    padding-block: 3rem 0;
+  }
+  .entry__title {
+    font-size: var(--size-title);
+    margin-top: 1.25rem;
+    max-width: 26ch;
+  }
+  .entry__tagline {
+    margin-top: 1.25rem;
+  }
+  .entry__body {
+    display: grid;
+    gap: 2.5rem;
+    margin-top: 3rem;
+  }
+  .rail {
+    border-top: 1px solid var(--hairline);
+    padding-top: 1.5rem;
+  }
+  .rail__list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+    margin: 0;
+  }
+  .rail__list dt {
+    margin-bottom: 0.3rem;
+  }
+  .rail__list dd {
+    margin: 0;
+    word-break: break-word;
+  }
+  .rail__wide {
+    grid-column: 1 / -1;
+  }
+  .rail__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  .rail__toc {
+    margin-top: 2rem;
+    border-top: 1px solid var(--hairline);
+    padding-top: 1.25rem;
+  }
+  .rail__toc-list {
+    list-style: none;
+    margin: 0.6rem 0 0;
+    padding: 0;
+    display: grid;
+    gap: 0.45rem;
+  }
+  .entry__hero {
+    aspect-ratio: 16 / 9;
+    margin-bottom: 3rem;
+  }
+
+  @media (min-width: 62rem) {
+    .entry {
+      padding-block: 5rem 0;
+    }
+    .entry__body {
+      grid-template-columns: 13rem minmax(0, 1fr);
+      gap: 4.5rem;
+      margin-top: 4.5rem;
+    }
+    /* Sticky only where there is room for it — never in a cramped two-column. */
+    .rail {
+      position: sticky;
+      top: 2.5rem;
+      align-self: start;
+    }
+    .rail__list {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1.125rem;
+    }
+    .rail__wide {
+      grid-column: auto;
+    }
+  }
+
+  .siblings {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    border-top: 1px solid var(--hairline);
+    margin-top: 5rem;
+    padding-top: 1.5rem;
+  }
+  .siblings__next {
+    text-align: right;
+  }
+</style>

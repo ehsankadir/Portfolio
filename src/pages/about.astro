@@ -1,0 +1,131 @@
+---
+import Base from '../layouts/Base.astro';
+import SectionHead from '../components/SectionHead.astro';
+import { profile } from '../data/profile';
+import { sortedTimeline } from '../data/timeline';
+
+const jsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: profile.name,
+  email: `mailto:${profile.email}`,
+  description: profile.positioning,
+});
+---
+
+<Base
+  title="About"
+  description={`About ${profile.name} — how I work, what I am learning, and the route so far.`}
+  jsonLd={jsonLd}
+>
+  <div class="shell page">
+    <p class="meta">About</p>
+    <h1 class="page__title">[REPLACE ME — a first-person line about what you care about.]</h1>
+
+    <div class="measure body">
+      <p>[REPLACE ME — where you are and what you actually do. Write it the way you would say it out loud.]</p>
+      <p>[REPLACE ME — how you work. The practice, not the résumé: how you approach a problem you have not seen before.]</p>
+      <p>[REPLACE ME — what you are trying to get better at right now, and why.]</p>
+      <p>[REPLACE ME — what you are looking for next, stated plainly. Vagueness here costs you opportunities.]</p>
+    </div>
+
+    <section class="section">
+      <SectionHead label="Journey" count={sortedTimeline.length} href="/resume" hrefLabel="Resume" />
+      <ol class="tl">
+        {sortedTimeline.map((entry, i) => (
+          <li class="tl__row" data-reveal={i}>
+            <div class="tl__side">
+              <span class="meta meta--ink">
+                {entry.start}{entry.end && <> — {entry.end}</>}
+              </span>
+              <span class="meta">{entry.kind}</span>
+            </div>
+            <div class="tl__body measure">
+              <h3 class="tl__title">{entry.title}</h3>
+              {entry.org && <p class="meta tl__org">{entry.org}</p>}
+              <p class="tl__summary">{entry.summary}</p>
+              {entry.href && (
+                <p class="tl__link"><a href={entry.href} class="meta ul link-accent">Read the write-up</a></p>
+              )}
+            </div>
+          </li>
+        ))}
+      </ol>
+    </section>
+
+    <section class="section" id="contact-anchor">
+      <SectionHead label="Contact" href="/contact" hrefLabel="Contact page" />
+      <p class="measure">
+        [REPLACE ME — one line about what you would like to hear about.] Email is best:
+        <a href={`mailto:${profile.email}`} class="ul link-accent">{profile.email}</a>.
+      </p>
+    </section>
+  </div>
+</Base>
+
+<style>
+  .page {
+    padding-block: 3rem 0;
+  }
+  .page__title {
+    font-size: var(--size-title);
+    margin-top: 1.25rem;
+    max-width: 24ch;
+  }
+  .body {
+    margin-top: 2rem;
+  }
+  .body p + p {
+    margin-top: 1.125rem;
+  }
+  .section {
+    margin-top: 5rem;
+  }
+  /* A single spine, with dates in a rail beside it. */
+  .tl {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    border-left: 1px solid var(--hairline);
+  }
+  .tl__row {
+    display: grid;
+    gap: 0.5rem;
+    padding: 1.75rem 0 1.75rem 1.25rem;
+  }
+  .tl__side {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+  }
+  .tl__title {
+    font-size: var(--size-h3);
+  }
+  .tl__org {
+    margin-top: 0.3rem;
+  }
+  .tl__summary {
+    margin-top: 0.6rem;
+    color: var(--ink-muted);
+  }
+  .tl__link {
+    margin-top: 0.75rem;
+  }
+  @media (min-width: 56rem) {
+    .tl__row {
+      grid-template-columns: 10rem minmax(0, 1fr);
+      gap: 2.5rem;
+      padding-left: 2rem;
+    }
+    .tl__side {
+      display: grid;
+      gap: 0.3rem;
+      align-content: start;
+    }
+  }
+  @media (min-width: 48rem) {
+    .page {
+      padding-block: 5rem 0;
+    }
+  }
+</style>

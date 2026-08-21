@@ -1,0 +1,134 @@
+---
+import Base from '../layouts/Base.astro';
+import Empty from '../components/Empty.astro';
+import { experiments, caseStudies } from '../lib/content';
+
+const items = await experiments();
+const workCount = (await caseStudies()).length;
+---
+
+<Base
+  title="Lab"
+  description="Short experiments, prototypes and dead ends. Smaller than a case study, kept because the result was interesting."
+>
+  <div class="shell page">
+    <p class="meta">Log · Experiments</p>
+    <h1 class="page__title">Things tried, briefly.</h1>
+    <p class="lead measure page__lead">
+      An afternoon each. Some worked. The ones that did not are still here, because a dead
+      end you can explain is worth keeping.
+    </p>
+
+    {items.length ? (
+      <ol class="log">
+        {items.map((item, i) => (
+          <li class="log__row" data-reveal={i}>
+            <a href={`/work/${item.id}`} class="log__link">
+              <span class="record log__id">{item.data.record}</span>
+              <span class="meta log__year">{item.data.year}</span>
+              <span class="log__body">
+                <span class="log__title">{item.data.title}</span>
+                <span class="log__tagline">{item.data.tagline}</span>
+              </span>
+              <span class="meta log__status">{item.data.status}</span>
+              <span class="meta log__stack">{item.data.technologies.join(' · ')}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <Empty line="Nothing logged yet. Add a markdown file to src/content/projects with depth: experiment." />
+    )}
+
+    <p class="cross">
+      <a href="/work" class="meta ul">Work — {workCount} case studies →</a>
+    </p>
+  </div>
+</Base>
+
+<style>
+  /* Deliberately unlike the Work index: denser, mono throughout, no serif. */
+  .page {
+    padding-block: 3rem 2rem;
+  }
+  .page__title {
+    font-size: var(--size-title);
+    margin-top: 1.25rem;
+  }
+  .page__lead {
+    margin-top: 1.25rem;
+  }
+  .log {
+    list-style: none;
+    margin: 3rem 0 0;
+    padding: 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .log__row {
+    border-bottom: 1px solid var(--hairline);
+  }
+  .log__link {
+    display: grid;
+    grid-template-columns: auto auto;
+    gap: 0.25rem 1rem;
+    padding-block: 0.875rem;
+    align-items: baseline;
+    transition: background var(--dur) var(--ease);
+  }
+  .log__row:hover .log__link {
+    background: var(--accent-quiet);
+  }
+  .log__body {
+    grid-column: 1 / -1;
+  }
+  .log__title {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    color: var(--ink);
+    display: block;
+  }
+  .log__row:hover .log__title {
+    color: var(--accent);
+  }
+  .log__tagline {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    line-height: 1.5;
+    color: var(--ink-muted);
+    margin-top: 0.15rem;
+    max-width: 60ch;
+  }
+  .log__status {
+    color: var(--accent);
+  }
+  .log__stack {
+    grid-column: 1 / -1;
+  }
+  @media (min-width: 56rem) {
+    .log__link {
+      grid-template-columns: 4.5rem 4rem minmax(0, 1fr) 7rem 12rem;
+      gap: 1.5rem;
+      padding-block: 0.75rem;
+    }
+    .log__body,
+    .log__stack {
+      grid-column: auto;
+    }
+    .log__stack {
+      text-align: right;
+    }
+    .log__tagline {
+      display: inline;
+      margin-left: 0.75rem;
+    }
+  }
+  .cross {
+    margin-top: 3rem;
+  }
+  @media (min-width: 48rem) {
+    .page {
+      padding-block: 5rem 2rem;
+    }
+  }
+</style>

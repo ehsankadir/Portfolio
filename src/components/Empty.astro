@@ -1,0 +1,25 @@
+---
+/** Empty states are directions, not apologies. */
+interface Props {
+  line: string;
+  actionHref?: string;
+  actionLabel?: string;
+}
+const { line, actionHref, actionLabel } = Astro.props;
+---
+
+<div class="empty">
+  <p class="measure">{line}</p>
+  {actionHref && <a href={actionHref} class="meta ul link-accent">{actionLabel}</a>}
+</div>
+
+<style>
+  .empty {
+    border-bottom: 1px solid var(--hairline);
+    padding-block: 2.5rem 3rem;
+    display: grid;
+    gap: 1rem;
+    justify-items: start;
+    color: var(--ink-muted);
+  }
+</style>

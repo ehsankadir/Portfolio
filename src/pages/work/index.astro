@@ -1,0 +1,147 @@
+---
+import Base from '../../layouts/Base.astro';
+import RecordRow from '../../components/RecordRow.astro';
+import Empty from '../../components/Empty.astro';
+import { caseStudies, categories, experiments } from '../../lib/content';
+
+const projects = await caseStudies();
+const cats = await categories();
+const labCount = (await experiments()).length;
+---
+
+<Base
+  title="Work"
+  description="A full index of engineering case studies — problem, approach, architecture, and what broke."
+>
+  <div class="shell page">
+    <p class="meta">Index · Case studies</p>
+    <h1 class="page__title">Everything documented properly.</h1>
+    <p class="lead measure page__lead">
+      Substantial work, written up as case studies. Smaller experiments live in the Lab.
+    </p>
+
+    {cats.length > 1 && (
+      <div class="filters" data-filters>
+        <span class="meta">Filter</span>
+        <div class="filters__set" role="group" aria-label="Filter by category">
+          <button class="plain meta ul filters__btn" data-cat="all" aria-pressed="true">
+            All
+          </button>
+          {cats.map((c) => (
+            <button class="plain meta ul filters__btn" data-cat={c} aria-pressed="false">
+              {c}
+            </button>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {projects.length ? (
+      <ol class="index" data-index>
+        {projects.map((project, i) => (
+          <div data-cat={project.data.category} class="index__wrap">
+            <RecordRow project={project} index={i} />
+          </div>
+        ))}
+      </ol>
+    ) : (
+      <Empty line="No case studies yet. Add a markdown file to src/content/projects with depth: case-study." />
+    )}
+
+    <div class="empty" data-empty hidden>
+      <p class="measure">Nothing in that category.</p>
+      <button class="plain meta ul link-accent" data-clear>Clear filter</button>
+    </div>
+
+    <p class="cross">
+      <a href="/lab" class="meta ul">Lab — {labCount} experiments →</a>
+    </p>
+  </div>
+</Base>
+
+<script>
+  const rows = document.querySelectorAll<HTMLElement>('.index__wrap');
+  const emptyBox = document.querySelector<HTMLElement>('[data-empty]');
+
+  function apply(cat: string) {
+    let shown = 0;
+    rows.forEach((row) => {
+      const match = cat === 'all' || row.dataset.cat === cat;
+      row.hidden = !match;
+      if (match) shown += 1;
+    });
+    document.querySelectorAll<HTMLButtonElement>('.filters__btn').forEach((b) => {
+      const on = b.dataset.cat === cat;
+      b.setAttribute('aria-pressed', String(on));
+      b.style.color = on ? 'var(--accent)' : '';
+    });
+    if (emptyBox) emptyBox.hidden = shown > 0;
+    const url = new URL(window.location.href);
+    if (cat === 'all') url.searchParams.delete('category');
+    else url.searchParams.set('category', cat);
+    history.replaceState(null, '', url);
+  }
+
+  document.querySelectorAll<HTMLButtonElement>('.filters__btn').forEach((b) => {
+    b.addEventListener('click', () => apply(b.dataset.cat || 'all'));
+  });
+  document.querySelector('[data-clear]')?.addEventListener('click', () => apply('all'));
+
+  // Filter state is readable from the URL, so a filtered view is shareable.
+  const initial = new URL(window.location.href).searchParams.get('category');
+  if (initial) apply(initial);
+</script>
+
+<style>
+  .page {
+    padding-block: 3rem 2rem;
+  }
+  .page__title {
+    font-size: var(--size-title);
+    margin-top: 1.25rem;
+    max-width: 22ch;
+  }
+  .page__lead {
+    margin-top: 1.25rem;
+  }
+  .filters {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 3rem;
+    border-top: 1px solid var(--hairline);
+    padding-top: 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .filters__set {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+  }
+  .index__wrap {
+    display: contents;
+  }
+  .index__wrap[hidden] {
+    display: none;
+  }
+  .empty {
+    border-bottom: 1px solid var(--hairline);
+    padding-block: 2.5rem 3rem;
+    display: grid;
+    gap: 1rem;
+    justify-items: start;
+    color: var(--ink-muted);
+  }
+  .cross {
+    margin-top: 3rem;
+  }
+  @media (min-width: 48rem) {
+    .page {
+      padding-block: 5rem 2rem;
+    }
+    .filters {
+      grid-template-columns: 9rem minmax(0, 1fr);
+      gap: 3rem;
+      align-items: baseline;
+    }
+  }
+</style>

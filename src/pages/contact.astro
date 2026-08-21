@@ -1,0 +1,85 @@
+---
+import Base from '../layouts/Base.astro';
+import { profile, socialLinks } from '../data/profile';
+---
+
+<Base
+  title="Contact"
+  description={`Get in touch with ${profile.name}.`}
+>
+  <div class="shell page">
+    <p class="meta">Contact</p>
+    <h1 class="page__email">
+      <a href={`mailto:${profile.email}`} class="ul">{profile.email}</a>
+    </h1>
+
+    <p class="lead measure page__lead">
+      [REPLACE ME — one line about what you would like to be contacted about. Being specific
+      gets you better email.]
+    </p>
+
+    <dl class="facts">
+      <div>
+        <dt class="meta">Status</dt>
+        <dd>{profile.openToWork ? profile.availability : 'Not looking at the moment.'}</dd>
+      </div>
+      <div>
+        <dt class="meta">Based in</dt>
+        <dd>{profile.location}</dd>
+      </div>
+      {socialLinks.length > 0 && (
+        <div>
+          <dt class="meta">Elsewhere</dt>
+          <dd class="facts__links">
+            {socialLinks.map((l) => (
+              <a href={l.href} class="ul link-accent" rel="me">{l.label}</a>
+            ))}
+          </dd>
+        </div>
+      )}
+    </dl>
+
+    <!-- No contact form: there is no backend, and a form that silently fails is
+         worse than an address that works. -->
+  </div>
+</Base>
+
+<style>
+  .page {
+    padding-block: 3rem 0;
+  }
+  .page__email {
+    font-size: var(--size-title);
+    margin-top: 1.25rem;
+    word-break: break-word;
+  }
+  .page__lead {
+    margin-top: 1.5rem;
+  }
+  .facts {
+    display: grid;
+    gap: 1.5rem;
+    border-top: 1px solid var(--hairline);
+    margin-top: 3rem;
+    padding-top: 1.75rem;
+    max-width: 44rem;
+  }
+  .facts dd {
+    margin: 0.4rem 0 0;
+    text-wrap: pretty;
+  }
+  .facts__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+  }
+  @media (min-width: 48rem) {
+    .page {
+      padding-block: 5rem 0;
+    }
+    .facts {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 2.5rem;
+    }
+  }
+</style>

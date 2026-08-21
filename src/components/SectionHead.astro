@@ -1,0 +1,37 @@
+---
+interface Props {
+  label: string;
+  href?: string;
+  hrefLabel?: string;
+  count?: number;
+}
+const { label, href, hrefLabel, count } = Astro.props;
+---
+
+<div class="sect">
+  <h2 class="meta meta--ink">
+    {label}{count !== undefined && <span class="sect__count"> — {count}</span>}
+  </h2>
+  {href && (
+    <a href={href} class="meta ul">{hrefLabel}</a>
+  )}
+</div>
+<hr />
+
+<style>
+  .sect {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  .sect h2 {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    letter-spacing: 0.09em;
+  }
+  .sect__count {
+    color: var(--ink-muted);
+  }
+</style>

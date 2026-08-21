@@ -1,0 +1,65 @@
+---
+import type { ProjectEntry } from '../lib/content';
+
+interface Props {
+  project: ProjectEntry;
+  index: number;
+  /** The lead entry gets more room. Used for the first featured case study. */
+  feature?: boolean;
+}
+const { project, index, feature = false } = Astro.props;
+const { record, title, tagline, year, category, technologies, status } = project.data;
+---
+
+<li class:list={['row', feature && 'row--feature']} data-reveal={index}>
+  <a href={`/work/${project.id}`}>
+    <span class="record">{record}</span>
+    <span class="row__main">
+      <h3 class="row__title">{title}</h3>
+      <span class="row__tagline">{tagline}</span>
+    </span>
+    <span class="meta row__year">{year}</span>
+    <span class="meta row__cat">
+      {category}
+      <span class="row__stack">{technologies.slice(0, 3).join(' · ')}</span>
+      {status !== 'shipped' && <span class="row__status">{status}</span>}
+    </span>
+  </a>
+</li>
+
+<style>
+  .row__main {
+    min-width: 0;
+  }
+  .row__tagline {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: var(--size-small);
+    color: var(--ink-muted);
+    max-width: 46ch;
+    text-wrap: pretty;
+  }
+  .row__stack,
+  .row__status {
+    display: block;
+  }
+  .row__status {
+    color: var(--accent);
+  }
+  /* Mobile: record and metadata read as one block above the title. */
+  .row__year {
+    order: -1;
+  }
+  @media (min-width: 56rem) {
+    .row__year {
+      order: 0;
+    }
+    .row__cat {
+      text-align: right;
+    }
+    .row--feature .row__tagline {
+      font-size: var(--size-body);
+      margin-top: 0.75rem;
+    }
+  }
+</style>

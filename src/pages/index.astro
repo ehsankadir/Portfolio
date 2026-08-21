@@ -1,0 +1,230 @@
+---
+import Base from '../layouts/Base.astro';
+import RecordRow from '../components/RecordRow.astro';
+import SectionHead from '../components/SectionHead.astro';
+import Empty from '../components/Empty.astro';
+import { profile } from '../data/profile';
+import {
+  featuredProjects,
+  caseStudies,
+  sortedPosts,
+  stackIndex,
+  fmtDate,
+  readingMinutes,
+} from '../lib/content';
+
+const featured = await featuredProjects();
+const totalWork = (await caseStudies()).length;
+const posts = (await sortedPosts()).slice(0, 3);
+const stack = await stackIndex();
+
+const jsonLd = JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'Person',
+  name: profile.name,
+  email: `mailto:${profile.email}`,
+  description: profile.positioning,
+});
+---
+
+<Base title={profile.name} description={profile.positioning} jsonLd={jsonLd}>
+  <!-- MASTHEAD. The claim is the thesis; the colophon is the front matter. -->
+  <section class="masthead ruled">
+    <div class="shell masthead__inner">
+      <p class="meta">Archive · {profile.location}</p>
+      <h1 class="masthead__claim">{profile.claim}</h1>
+
+      <dl class="colophon">
+        {profile.currently.map((row) => (
+          <div class="colophon__row">
+            <dt class="meta">{row.label}</dt>
+            <dd class="colophon__value">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </section>
+
+  <!-- THE INDEX. The centrepiece, immediately after the fold. -->
+  <section class="shell block block--major">
+    <SectionHead label="Selected work" count={totalWork} href="/work" hrefLabel="Full index" />
+    {featured.length ? (
+      <ol class="index">
+        {featured.map((project, i) => (
+          <RecordRow project={project} index={i} feature={i === 0} />
+        ))}
+      </ol>
+    ) : (
+      <Empty
+        line="No case studies are marked as featured yet. Set `featured: true` in a project's frontmatter to surface it here."
+        actionHref="/work"
+        actionLabel="See the full index"
+      />
+    )}
+  </section>
+
+  <!-- ABOUT. Compact on purpose. -->
+  <section class="shell block">
+    <div class="split">
+      <p class="meta">About</p>
+      <div class="measure">
+        <p>[REPLACE ME — one sentence on what you build.]</p>
+        <p>[REPLACE ME — one sentence on how you work.]</p>
+        <p>[REPLACE ME — one sentence on what you want next.]</p>
+        <p class="split__more"><a href="/about" class="meta ul link-accent">Read more</a></p>
+      </div>
+    </div>
+  </section>
+
+  <!-- STACK. Derived from the projects, never asserted. -->
+  <section class="shell block">
+    <div class="split">
+      <p class="meta">Stack</p>
+      <ul class="stack">
+        {stack.map(({ tech, count }) => (
+          <li class="stack__item">
+            <span class="meta meta--plain stack__tech">{tech}</span>
+            <span class="record">{count}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  </section>
+
+  <!-- WRITING. Compact. -->
+  <section class="shell block">
+    <SectionHead label="Writing" href="/writing" hrefLabel="All writing" />
+    {posts.length ? (
+      <ol class="index">
+        {posts.map((post, i) => (
+          <li class="row" data-reveal={i}>
+            <a href={`/writing/${post.id}`} class="note">
+              <span class="record">{post.data.record}</span>
+              <h3 class="row__title">{post.data.title}</h3>
+              <span class="meta note__meta">
+                {fmtDate(post.data.published)} · {readingMinutes(post.body ?? '')} min
+              </span>
+            </a>
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <Empty line="Nothing published yet. Notes and breakdowns will appear here as they are written." />
+    )}
+  </section>
+</Base>
+
+<style>
+  .masthead {
+    border-bottom: 1px solid var(--hairline);
+  }
+  .masthead__inner {
+    padding-block: 3.5rem 3rem;
+  }
+  .masthead__claim {
+    font-size: var(--size-masthead);
+    margin-top: 1.5rem;
+    max-width: 26ch;
+    font-variation-settings: 'opsz' 96;
+    letter-spacing: -0.025em;
+  }
+  .colophon {
+    display: grid;
+    gap: 0.875rem;
+    margin-top: 3rem;
+    border-top: 1px solid var(--hairline);
+    padding-top: 1.5rem;
+  }
+  .colophon__row {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.125rem;
+  }
+  .colophon__value {
+    margin: 0;
+    font-size: var(--size-small);
+    color: var(--ink);
+    text-wrap: pretty;
+  }
+
+  @media (min-width: 48rem) {
+    .masthead__inner {
+      padding-block: 6rem 4.5rem;
+    }
+    .colophon {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 2.5rem;
+      margin-top: 5rem;
+    }
+    .colophon__row {
+      gap: 0.5rem;
+    }
+  }
+
+  /* Rhythm is deliberately uneven: the index breathes, the rest is tight. */
+  .block {
+    padding-block: 3rem;
+  }
+  .block--major {
+    padding-block: 4.5rem;
+  }
+  @media (min-width: 48rem) {
+    .block {
+      padding-block: 4rem;
+    }
+    .block--major {
+      padding-block: 7rem;
+    }
+  }
+
+  .split {
+    display: grid;
+    gap: 1rem;
+  }
+  .split p + p {
+    margin-top: 0.75rem;
+  }
+  .split__more {
+    margin-top: 1.25rem;
+  }
+  @media (min-width: 48rem) {
+    .split {
+      grid-template-columns: 9rem minmax(0, 1fr);
+      gap: 3rem;
+    }
+  }
+
+  .stack {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+  }
+  .stack__item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.4rem;
+  }
+  .stack__tech {
+    color: var(--ink);
+  }
+
+  .note {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.375rem;
+    padding-block: 1.25rem;
+  }
+  @media (min-width: 56rem) {
+    .note {
+      grid-template-columns: 4.5rem minmax(0, 1fr) auto;
+      align-items: baseline;
+      gap: 1.5rem;
+    }
+    .note__meta {
+      text-align: right;
+    }
+  }
+</style>

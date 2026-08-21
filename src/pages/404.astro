@@ -1,0 +1,36 @@
+---
+import Base from '../layouts/Base.astro';
+---
+
+<Base title="Not found" description="That page does not exist.">
+  <div class="shell page">
+    <p class="meta">Error · 404</p>
+    <h1 class="page__title">No record at that address.</h1>
+    <p class="lead measure page__lead">
+      The link may be mistyped, or the page has moved. Two places worth trying:
+    </p>
+    <p class="page__links">
+      <a href="/work" class="meta ul link-accent">Work index</a>
+      <a href="/writing" class="meta ul link-accent">Writing index</a>
+    </p>
+  </div>
+</Base>
+
+<style>
+  .page {
+    padding-block: 5rem 8rem;
+  }
+  .page__title {
+    font-size: var(--size-title);
+    margin-top: 1.25rem;
+  }
+  .page__lead {
+    margin-top: 1.25rem;
+  }
+  .page__links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    margin-top: 2rem;
+  }
+</style>
