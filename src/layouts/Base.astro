@@ -93,7 +93,6 @@ const path = Astro.url.pathname;
                 <span class="nav-item__n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span> {item.label}
               </a>
             ))}
-            <button class="plain meta ul" data-rain-toggle aria-pressed="false" hidden>Rain</button>
             <button class="plain meta ul" data-theme-toggle aria-pressed="true">Theme</button>
           </nav>
         </div>
@@ -172,9 +171,9 @@ const path = Astro.url.pathname;
       }
 
       // Falling digits. One canvas, ~30fps, paused when the tab is hidden.
-      // Off by default under reduced motion, but the Rain button can turn it on (explicit choice wins).
+      // Skipped entirely under reduced motion (the canvas is also hidden in CSS).
       const canvas = document.querySelector<HTMLCanvasElement>('[data-rain]');
-      if (canvas) {
+      if (canvas && !reduced) {
         const ctx = canvas.getContext('2d');
         const CELL = 18;
         const FRAME_MS = 1000 / 30;
@@ -235,35 +234,10 @@ const path = Astro.url.pathname;
           });
         };
 
-        // The user can pause the rain (WCAG 2.2.2); the choice is remembered.
-        const rainBtn = document.querySelector<HTMLButtonElement>('[data-rain-toggle]');
-        let paused = reduced;
-        try {
-          const saved = localStorage.getItem('rain');
-          if (saved) paused = saved === 'off';
-        } catch {}
-        const applyPaused = () => {
-          root.toggleAttribute('data-paused', paused);
-          rainBtn?.setAttribute('aria-pressed', String(!paused));
-          if (rainBtn) rainBtn.textContent = 'Rain';
-          if (paused) cancelAnimationFrame(raf);
-        };
         const start = () => {
           cancelAnimationFrame(raf);
-          if (!paused) raf = requestAnimationFrame(tick);
+          raf = requestAnimationFrame(tick);
         };
-        if (rainBtn) {
-          rainBtn.hidden = false;
-          rainBtn.addEventListener('click', () => {
-            paused = !paused;
-            try {
-              localStorage.setItem('rain', paused ? 'off' : 'on');
-            } catch {}
-            applyPaused();
-            if (!paused) start();
-          });
-        }
-        applyPaused();
         let resizeTimer = 0;
         window.addEventListener('resize', () => {
           clearTimeout(resizeTimer);
@@ -328,8 +302,10 @@ const path = Astro.url.pathname;
       :global(:root[data-theme='light']) .rain {
         opacity: 0.18;
       }
-      :global([data-paused]) .rain {
-        display: none;
+      @media (prefers-reduced-motion: reduce) {
+        .rain {
+          display: none;
+        }
       }
       :global(.skip:focus) {
         z-index: 2;

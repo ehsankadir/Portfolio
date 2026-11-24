@@ -521,9 +521,6 @@ button.plain.meta {
     animation: none;
   }
 }
-[data-paused] .caret {
-  animation: none;
-}
 
 /* ==========================================================================
    PRINT — /resume is meant to be printed to PDF
