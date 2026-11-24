@@ -55,50 +55,52 @@ const path = Astro.url.pathname;
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
       rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,400..600&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500;700&display=swap"
     />
 
     {jsonLd && <script type="application/ld+json" set:html={jsonLd} />}
 
-    <!-- Theme before first paint: no flash, respects the system on first visit. -->
+    <!-- Theme before first paint: no flash. Dark is the default; a stored choice wins. -->
     <script is:inline>
       (function () {
         try {
           var stored = localStorage.getItem('theme');
-          var dark = stored
-            ? stored === 'dark'
-            : window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var dark = stored ? stored === 'dark' : true;
           document.documentElement.dataset.theme = dark ? 'dark' : 'light';
         } catch (e) {}
+        document.documentElement.classList.add('js');
       })();
+
     </script>
   </head>
 
   <body>
     <a class="skip meta meta--ink" href="#main">Skip to content</a>
 
+    {!bare && <canvas class="rain no-print" aria-hidden="true" data-rain></canvas>}
+
     {!bare && (
       <header class="site-head no-print">
         <div class="shell site-head__inner">
           <a href="/" class="meta meta--ink ul site-head__name">{profile.name}</a>
           <nav aria-label="Primary" class="site-nav">
-            {nav.map((item) => (
+            {nav.map((item, i) => (
               <a
                 href={item.href}
-                class="meta ul"
-                style={path.startsWith(item.href) ? 'color: var(--accent)' : ''}
+                class="meta ul nav-item"
                 aria-current={path.startsWith(item.href) ? 'page' : undefined}
               >
-                {item.label}
+                <span class="nav-item__n" aria-hidden="true">{String(i + 1).padStart(2, '0')}</span> {item.label}
               </a>
             ))}
-            <button class="plain meta ul" data-theme-toggle aria-live="polite">Theme</button>
+            <button class="plain meta ul" data-rain-toggle aria-pressed="false" hidden>Rain</button>
+            <button class="plain meta ul" data-theme-toggle aria-pressed="true">Theme</button>
           </nav>
         </div>
       </header>
     )}
 
-    <main id="main">
+    <main id="main" tabindex="-1">
       <slot />
     </main>
 
@@ -115,7 +117,7 @@ const path = Astro.url.pathname;
             {socialLinks.map((l) => (
               <a href={l.href} class="meta ul" rel="me">{l.label}</a>
             ))}
-            <a href="/lab" class="meta ul">Lab</a>
+            {experiments.length >= 4 && <a href="/lab" class="meta ul">Lab</a>}
             <a href="/resume" class="meta ul">Resume</a>
             <a href="/contact" class="meta ul">Contact</a>
           </nav>
@@ -130,15 +132,20 @@ const path = Astro.url.pathname;
       // Theme toggle
       const root = document.documentElement;
       const btn = document.querySelector('[data-theme-toggle]');
-      const label = () => (root.dataset.theme === 'dark' ? 'Light' : 'Dark');
+      const syncTheme = () => {
+        if (!btn) return;
+        const dark = root.dataset.theme === 'dark';
+        btn.textContent = 'Dark theme';
+        btn.setAttribute('aria-pressed', String(dark));
+      };
       if (btn) {
-        btn.textContent = label();
-        btn.setAttribute('aria-label', `Switch to ${label().toLowerCase()} theme`);
+        syncTheme();
         btn.addEventListener('click', () => {
           root.dataset.theme = root.dataset.theme === 'dark' ? 'light' : 'dark';
-          localStorage.setItem('theme', root.dataset.theme);
-          btn.textContent = label();
-          btn.setAttribute('aria-label', `Switch to ${label().toLowerCase()} theme`);
+          try {
+            localStorage.setItem('theme', root.dataset.theme);
+          } catch {}
+          syncTheme();
         });
       }
 
@@ -163,6 +170,115 @@ const path = Astro.url.pathname;
         );
         items.forEach((el) => io.observe(el));
       }
+
+      // Falling digits. One canvas, ~30fps, paused when the tab is hidden.
+      // Skipped entirely under reduced motion (the canvas is also hidden in CSS).
+      const canvas = document.querySelector<HTMLCanvasElement>('[data-rain]');
+      if (canvas && !reduced) {
+        const ctx = canvas.getContext('2d');
+        const CELL = 18;
+        const FRAME_MS = 1000 / 30;
+        type Drop = { y: number; v: number };
+        let drops: Drop[] = [];
+        let rows = 0;
+        let color = '#46e0a0';
+        let raf = 0;
+        let last = 0;
+
+        const readColor = () => {
+          color = getComputedStyle(root).getPropertyValue('--accent').trim() || color;
+        };
+        const fresh = (spread: number): Drop => ({
+          y: -Math.random() * spread,
+          v: 0.15 + Math.random() * 0.3,
+        });
+        let sizedW = 0;
+        let sizedH = 0;
+        const resize = () => {
+          if (!ctx) return;
+          const dpr = Math.min(window.devicePixelRatio || 1, 2);
+          // clientWidth excludes the scrollbar; innerWidth would stretch the canvas under it.
+          const w = document.documentElement.clientWidth;
+          const h = window.innerHeight;
+          // Mobile URL bars resize the viewport while scrolling; ignore that so the rain does not restart.
+          if (sizedW === w && Math.abs(sizedH - h) < 120) return;
+          sizedW = w;
+          sizedH = h;
+          canvas.width = Math.floor(w * dpr);
+          canvas.height = Math.floor(h * dpr);
+          ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+          ctx.font = `${CELL - 4}px 'JetBrains Mono', ui-monospace, monospace`;
+          ctx.textBaseline = 'top';
+          rows = Math.ceil(h / CELL);
+          drops = Array.from({ length: Math.ceil(w / CELL) }, () => fresh(rows * 1.5));
+          readColor();
+        };
+
+        const tick = (now: number) => {
+          raf = requestAnimationFrame(tick);
+          if (!ctx || now - last < FRAME_MS) return;
+          last = now;
+          // Fade what is already drawn; this is what leaves the trails.
+          ctx.globalCompositeOperation = 'destination-out';
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.06)';
+          ctx.fillRect(0, 0, canvas.clientWidth, canvas.clientHeight);
+          ctx.globalCompositeOperation = 'source-over';
+          ctx.fillStyle = color;
+          drops.forEach((d, i) => {
+            const before = Math.floor(d.y);
+            d.y += d.v;
+            const row = Math.floor(d.y);
+            if (row !== before && row >= 0 && row < rows) {
+              ctx.fillText(Math.random() < 0.5 ? '0' : '1', i * CELL + 2, row * CELL);
+            }
+            if (row > rows && Math.random() > 0.97) Object.assign(d, fresh(rows * 0.6));
+          });
+        };
+
+        // The user can pause the rain (WCAG 2.2.2); the choice is remembered.
+        const rainBtn = document.querySelector<HTMLButtonElement>('[data-rain-toggle]');
+        let paused = false;
+        try {
+          paused = localStorage.getItem('rain') === 'off';
+        } catch {}
+        const applyPaused = () => {
+          root.toggleAttribute('data-paused', paused);
+          rainBtn?.setAttribute('aria-pressed', String(!paused));
+          if (rainBtn) rainBtn.textContent = 'Rain';
+          if (paused) cancelAnimationFrame(raf);
+        };
+        const start = () => {
+          cancelAnimationFrame(raf);
+          if (!paused) raf = requestAnimationFrame(tick);
+        };
+        if (rainBtn) {
+          rainBtn.hidden = false;
+          rainBtn.addEventListener('click', () => {
+            paused = !paused;
+            try {
+              localStorage.setItem('rain', paused ? 'off' : 'on');
+            } catch {}
+            applyPaused();
+            if (!paused) start();
+          });
+        }
+        applyPaused();
+        let resizeTimer = 0;
+        window.addEventListener('resize', () => {
+          clearTimeout(resizeTimer);
+          resizeTimer = window.setTimeout(resize, 150);
+        });
+        document.addEventListener('visibilitychange', () =>
+          document.hidden ? cancelAnimationFrame(raf) : start(),
+        );
+        // Pick up the new accent when the theme is toggled.
+        new MutationObserver(readColor).observe(root, {
+          attributes: true,
+          attributeFilter: ['data-theme'],
+        });
+        resize();
+        start();
+      }
     </script>
 
     <style>
@@ -179,6 +295,58 @@ const path = Astro.url.pathname;
       }
       .site-head__name {
         letter-spacing: 0.12em;
+      }
+      .site-head__name::before {
+        content: '~/';
+        color: var(--accent);
+        margin-right: 0.15em;
+      }
+      .nav-item__n {
+        color: var(--accent);
+      }
+
+      /* Falling-digits backdrop. Fixed behind everything; never intercepts input. */
+      .rain {
+        position: fixed;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+        pointer-events: none;
+        opacity: 0.14;
+        /* Fade out on all four edges so nothing is cut off hard, scrollbar side included. */
+        -webkit-mask-image:
+          linear-gradient(to right, transparent, #000 7%, #000 93%, transparent),
+          linear-gradient(to bottom, transparent, #000 8%, #000 92%, transparent);
+        -webkit-mask-composite: source-in;
+        mask-image:
+          linear-gradient(to right, transparent, #000 7%, #000 93%, transparent),
+          linear-gradient(to bottom, transparent, #000 8%, #000 92%, transparent);
+        mask-composite: intersect;
+      }
+      :global(:root[data-theme='light']) .rain {
+        opacity: 0.1;
+      }
+      :global([data-paused]) .rain {
+        display: none;
+      }
+      :global(.skip:focus) {
+        z-index: 2;
+      }
+      :global(a[aria-current='page']) {
+        color: var(--accent);
+        background-size: 100% 1px;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .rain {
+          display: none;
+        }
+      }
+      main,
+      .site-head,
+      .site-foot {
+        position: relative;
+        z-index: 1;
       }
       .site-nav {
         display: flex;
