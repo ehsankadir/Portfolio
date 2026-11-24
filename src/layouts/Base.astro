@@ -172,9 +172,9 @@ const path = Astro.url.pathname;
       }
 
       // Falling digits. One canvas, ~30fps, paused when the tab is hidden.
-      // Skipped entirely under reduced motion (the canvas is also hidden in CSS).
+      // Off by default under reduced motion, but the Rain button can turn it on (explicit choice wins).
       const canvas = document.querySelector<HTMLCanvasElement>('[data-rain]');
-      if (canvas && !reduced) {
+      if (canvas) {
         const ctx = canvas.getContext('2d');
         const CELL = 18;
         const FRAME_MS = 1000 / 30;
@@ -237,9 +237,10 @@ const path = Astro.url.pathname;
 
         // The user can pause the rain (WCAG 2.2.2); the choice is remembered.
         const rainBtn = document.querySelector<HTMLButtonElement>('[data-rain-toggle]');
-        let paused = false;
+        let paused = reduced;
         try {
-          paused = localStorage.getItem('rain') === 'off';
+          const saved = localStorage.getItem('rain');
+          if (saved) paused = saved === 'off';
         } catch {}
         const applyPaused = () => {
           root.toggleAttribute('data-paused', paused);
@@ -336,11 +337,6 @@ const path = Astro.url.pathname;
       :global(a[aria-current='page']) {
         color: var(--accent);
         background-size: 100% 1px;
-      }
-      @media (prefers-reduced-motion: reduce) {
-        .rain {
-          display: none;
-        }
       }
       main,
       .site-head,
